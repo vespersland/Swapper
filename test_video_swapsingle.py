@@ -6,7 +6,6 @@ LastEditors: Naiyuan liu
 LastEditTime: 2021-11-24 19:00:38
 Description: 
 '''
-
 import cv2
 import torch
 import fractions
@@ -15,6 +14,7 @@ from PIL import Image
 import torch.nn.functional as F
 from torchvision import transforms
 from models.models import create_model
+from models.projected_model import fsModel
 from options.test_options import TestOptions
 from insightface_func.face_detect_crop_single import Face_detect_crop
 from util.videoswap import video_swap
@@ -32,6 +32,7 @@ transformer_Arcface = transforms.Compose([
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ])
 
+
 # detransformer = transforms.Compose([
 #         transforms.Normalize([0, 0, 0], [1/0.229, 1/0.224, 1/0.225]),
 #         transforms.Normalize([-0.485, -0.456, -0.406], [1, 1, 1])
@@ -40,23 +41,32 @@ transformer_Arcface = transforms.Compose([
 
 if __name__ == '__main__':
     opt = TestOptions().parse()
-
     start_epoch, epoch_iter = 1, 0
     crop_size = opt.crop_size
 
     torch.nn.Module.dump_patches = True
     if crop_size == 512:
+      if opt.name == str(512):
         opt.which_epoch = 550000
-        opt.name = '512'
-        mode = 'ffhq'
-    else:
-        mode = 'None'
-    model = create_model(opt)
-    model.eval()
+      else:
+        opt.Gdeep = True
+        opt.new_model = True
 
+      mode = 'None'
+    else:
+      mode = 'None'
+
+    if opt.new_model == True:
+        model = fsModel()
+        model.initialize(opt)
+        model.netG.eval()
+    else:            
+        model = create_model(opt)
+        model.eval()
 
     app = Face_detect_crop(name='antelope', root='./insightface_func/models')
     app.prepare(ctx_id= 0, det_thresh=0.6, det_size=(640,640),mode=mode)
+
     with torch.no_grad():
         pic_a = opt.pic_a_path
         # img_a = Image.open(pic_a).convert('RGB')
@@ -82,6 +92,5 @@ if __name__ == '__main__':
         latend_id = model.netArc(img_id_downsample)
         latend_id = F.normalize(latend_id, p=2, dim=1)
 
-        video_swap(opt.video_path, latend_id, model, app, opt.output_path,temp_results_dir=opt.temp_path,\
-            no_simswaplogo=opt.no_simswaplogo,use_mask=opt.use_mask,crop_size=crop_size)
-
+        video_swap(opt.video_path, latend_id, model, app, opt.output_path, temp_results_dir=opt.temp_path,\
+            no_simswaplogo=opt.no_simswaplogo, use_mask=opt.use_mask, crop_size=crop_size, new_model=opt.new_model)
