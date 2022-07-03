@@ -8,6 +8,16 @@ Description:
 '''
 from .base_options import BaseOptions
 
+
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+
+    
 class TestOptions(BaseOptions):
     def initialize(self):
         BaseOptions.initialize(self)
@@ -34,5 +44,6 @@ class TestOptions(BaseOptions):
         self.parser.add_argument('--no_simswaplogo', action='store_true', help='Remove the watermark')
         self.parser.add_argument('--use_mask', action='store_true', help='Use mask for better result')
         self.parser.add_argument('--crop_size', type=int, default=224, help='Crop of size of input image')
-        
+        self.parser.add_argument('--new_model', type=str2bool, default=False, const=False, nargs='?', help='Use new pretrained model')
+        self.parser.add_argument('--Gdeep', type=str2bool, default=False)
         self.isTrain = False
